@@ -35,6 +35,10 @@ module Fog
             end
           end
 
+          if options['os:scheduler_hints']
+            data['os:scheduler_hints'] = options['os:scheduler_hints']
+          end
+
           request(
             :body     => Fog::JSON.encode(data),
             :expects  => [200, 202],
@@ -63,7 +67,9 @@ module Fog
             'accessIPv4' => options['accessIPv4'] || "",
             'accessIPv6' => options['accessIPv6'] || "",
             'progress'   => 0,
-            'status'     => 'BUILD'
+            'status'     => 'BUILD',
+            'created'    => '2012-09-27T00:04:18Z',
+            'updated'    => '2012-09-27T00:04:27Z',
           }
 
           self.data[:last_modified][:servers][data['id']] = Time.now

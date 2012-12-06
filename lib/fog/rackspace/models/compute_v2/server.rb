@@ -33,6 +33,7 @@ module Fog
         attribute :tenant_id
         attribute :links
         attribute :metadata
+        attribute :personality
         attribute :ipv4_address, :aliases => 'accessIPv4'
         attribute :ipv6_address, :aliases => 'accessIPv6'
         attribute :disk_config, :aliases => 'OS-DCF:diskConfig'
@@ -40,7 +41,7 @@ module Fog
         attribute :addresses
         attribute :flavor_id, :aliases => 'flavor', :squash => 'id'
         attribute :image_id, :aliases => 'image', :squash => 'id'
-
+        
         attr_reader :password
 
         def save
@@ -54,7 +55,13 @@ module Fog
 
         def create
           requires :name, :image_id, :flavor_id
-          data = connection.create_server(name, image_id, flavor_id, 1, 1)
+
+          options = {}
+          options[:disk_config] = disk_config unless disk_config.nil?
+          options[:metadata] = metadata unless metadata.nil?
+          options[:personality] = personality unless personality.nil?
+
+          data = connection.create_server(name, image_id, flavor_id, 1, 1, options)
           merge_attributes(data.body['server'])
           true
         end
@@ -80,6 +87,23 @@ module Fog
         def image
           requires :image_id
           @image ||= connection.images.get(image_id)
+        end
+
+        def attachments
+          @attachments ||= begin
+            Fog::Compute::RackspaceV2::Attachments.new({
+              :connection => connection,
+              :server => self
+            })
+          end
+        end
+        
+        def private_ip_address
+          addresses['private'].select{|a| a["version"] == 4}[0]["addr"]
+        end
+
+        def public_ip_address
+          ipv4_address
         end
 
         def ready?
@@ -125,6 +149,20 @@ module Fog
           self.state = PASSWORD
           @password = password
           true
+        end
+        
+        def setup(credentials = {})
+          requires :public_ip_address, :identity, :public_key, :username
+          Fog::SSH.new(public_ip_address, username, credentials).run([
+            %{mkdir .ssh},
+            %{echo "#{public_key}" >> ~/.ssh/authorized_keys},
+            %{passwd -l #{username}},
+            %{echo "#{Fog::JSON.encode(attributes)}" >> ~/attributes.json},
+            %{echo "#{Fog::JSON.encode(metadata)}" >> ~/metadata.json}
+          ])
+        rescue Errno::ECONNREFUSED
+          sleep(1)
+          retry
         end
 
         private

@@ -113,6 +113,7 @@ module Fog
       request :modify_instance_attribute
       request :modify_network_interface_attribute
       request :modify_snapshot_attribute
+      request :modify_volume_attribute
       request :purchase_reserved_instances_offering
       request :reboot_instances
       request :release_address
@@ -212,13 +213,15 @@ module Fog
           @data = nil
         end
 
+        attr_accessor :region
+
         def initialize(options={})
           @use_iam_profile = options[:use_iam_profile]
           @aws_credentials_expire_at = Time::now + 20
           setup_credentials(options)
           @region = options[:region] || 'us-east-1'
 
-          unless ['ap-northeast-1', 'ap-southeast-1', 'eu-west-1', 'us-east-1', 'us-west-1', 'us-west-2', 'sa-east-1'].include?(@region)
+          unless ['ap-northeast-1', 'ap-southeast-1', 'ap-southeast-2', 'eu-west-1', 'us-east-1', 'us-west-1', 'us-west-2', 'sa-east-1'].include?(@region)
             raise ArgumentError, "Unknown region: #{@region.inspect}"
           end
         end
