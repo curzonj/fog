@@ -37,7 +37,7 @@ module Fog
                   'reason', 'rootDeviceType'
               @instance[name] = value
             when 'attachTime'
-              @block_device_mapping[name] = Time.parse(value)
+              @block_device_mapping[name] = Time.parse(value) rescue nil
             when *@contexts
               @context.pop
             when 'code'
